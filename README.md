@@ -1,5 +1,5 @@
 # Bookmark Launcher
-A single web-page bookmark utility
+A simple HTML utility
 
 # Suggested Use
 1. Download the single-page HTML file and store somewhere locally
