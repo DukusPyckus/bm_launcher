@@ -14,20 +14,12 @@
 				var $btn = $(e.target); if (!$btn.hasClass('btn')) $btn = $btn.closest('.btn'); $btn.button('toggle');
 				if (!$(e.target).is('input:radio')) { e.preventDefault(); }
 			});
-			
-			$scope.row_add = function() {
-				$scope.data.push([ { label: 'Section 1', items: [ { label: 'Link 1', path: 'path' } ] } ]);
-				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
-			}
-			$scope.row_move = function(dir, i) {
-				var item = $scope.data[i];
-				$scope.data.splice(i, 1);
-				$scope.data.splice(i+dir, 0, item);
-				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
-			}
-			
-			$scope.row_mod = function(row, mod, p1) {
+						
+			$scope.row_mod = function(mod, row, p1) {
 				switch (mod) {
+					case "add":
+						$scope.data.push([ { label: 'Section 1', items: [ { label: 'Link 1', path: 'path' } ] } ]);
+					break;
 					case "remove":
 						$scope.data.splice(row, 1);
 					break;
@@ -42,13 +34,13 @@
 				}
 				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
 			}
-			$scope.section_mod = function(row, section, mod, p1, p2) {
+			$scope.section_mod = function(mod, row, section, p1, p2) {
 				switch (mod) {
 					case 'rename':
 						$scope.data[row][section].label = p1;
 					break;
 					case 'addLink':
-						$scope.data[row][section].items.push(obj);
+						$scope.data[row][section].items.push({ label: p1, path: p2 });
 					break;
 					case 'move-x':
 						var item = $scope.data[row][section];
@@ -70,7 +62,7 @@
 				}
 				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
 			}
-			$scope.link_mod = function(row, section, link, mod, p1, p2, p3, p4) {
+			$scope.link_mod = function(mod, row, section, link, p1, p2, p3, p4) {
 				switch (mod) {
 					case 'move':
 						var item = $scope.data[row][section].items[link];
@@ -147,34 +139,34 @@
 			$scope.modal_confirm = function() {
 				switch ($scope.modal_meta.action) {
 					case 'row_remove':
-						$scope.row_mod($scope.modal_meta.row, 'remove');
+						$scope.row_mod('remove', $scope.modal_meta.row);
 					break;
 					case 'section_add':
 						if ($scope.modal_meta.input_1_val.length > 0) {
-							$scope.row_mod($scope.modal_meta.row, 'addSection', $scope.modal_meta.input_1_val);
+							$scope.row_mod('addSection', $scope.modal_meta.row, $scope.modal_meta.input_1_val);
 						} else { return; }
 					break;
 					case 'section_rename':
 						if ($scope.modal_meta.input_1_val.length > 0) {
-							$scope.section_mod($scope.modal_meta.row, $scope.modal_meta.section, 'rename', $scope.modal_meta.input_1_val);
+							$scope.section_mod('rename', $scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.input_1_val);
 						} else { return; }
 					break;
 					case 'section_remove':
-						$scope.section_mod($scope.modal_meta.row, $scope.modal_meta.section, 'remove');
+						$scope.section_mod('remove', $scope.modal_meta.row, $scope.modal_meta.section);
 					break;
 					case 'link_add':
 						if ($scope.modal_meta.input_1_val.length > 0 && $scope.modal_meta.input_2_val.length > 0) {
-							$scope.section_mod($scope.modal_meta.select_row_val, $scope.modal_meta.select_section_val, 'addLink', $scope.modal_meta.input_1_val, $scope.modal_meta.input_2_val);
+							$scope.section_mod('addLink', $scope.modal_meta.select_row_val, $scope.modal_meta.select_section_val, $scope.modal_meta.input_1_val, $scope.modal_meta.input_2_val);
 						} else { return; }
 					break;					
 					case 'link_edit':
 						if ($scope.modal_meta.input_1_val.length > 0 && $scope.modal_meta.input_2_val.length > 0) {
-							$scope.link_mod($scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link, 'edit',
+							$scope.link_mod('edit', $scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link,
 								$scope.modal_meta.select_row_val, $scope.modal_meta.select_section_val, $scope.modal_meta.input_1_val, $scope.modal_meta.input_2_val);
 						} else { return; }
 					break;
 					case 'link_remove':
-						$scope.link_mod($scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link, 'remove');
+						$scope.link_mod('remove', $scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link);
 					break;
 					case 'local_data_clear':
 						$scope.data_manage('reset_urls');
@@ -192,6 +184,7 @@
 						document.getElementById('blobFile').click();
 					break;
 					case 'download_csv':
+						var data = '';
 						for (var row in $scope.data) {
 							data += '"**Row**","' + row + '"\r\n\r\n';
 							for (var section in $scope.data[row]) {
@@ -214,6 +207,7 @@
 							try {
 								var data = JSON.parse(reader.result);
 								$scope.data = data.urls;
+								localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
 								$scope.$apply()
 							} catch {
 								alert("Bad data formatting? Sorry *shrug*");
@@ -324,18 +318,18 @@
 					<div class="col-7 row p-2">
 						<button ng-click="logic.inSet = false;" class="btn btn-info col m-1">Leave Settings</button>
 						<button ng-click="modal_show({ action: 'local_data' })" class="btn btn-warning col m-1" data-toggle="modal" data-target="#settingsModal">Manage Local Data</button>
-						<button ng-click="row_add();" class="btn btn-primary col m-1">Add New Row</button>
+						<button ng-click="row_mod('add');" class="btn btn-primary col m-1">Add New Row</button>
 					</div>
 				</div>
 				<div ng-repeat="row in data track by $index" class="card text-white bg-dark border-dark mb-3">
 				  <div class="card-header container-fluid"><div class="row">
 					<h4 class="col">Row {{$index + 1}}</h4>
-					<button ng-disabled="$index == 0" class="btn btn-secondary m-1" ng-click="row_mod($index, 'move', -1);">
+					<button ng-disabled="$index == 0" class="btn btn-secondary m-1" ng-click="row_mod('move', $index, -1);">
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-square-fill" viewBox="0 0 16 16">
 						  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 11.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
 						</svg> Move Up
 					</button>
-					<button ng-disabled="$index == data.length-1" class="btn btn-secondary m-1" ng-click="row_mod($index, 'move', 1);">
+					<button ng-disabled="$index == data.length-1" class="btn btn-secondary m-1" ng-click="row_mod('move', $index, 1);">
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-square-fill" viewBox="0 0 16 16">
 						  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5a.5.5 0 0 0-1 0v5.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V4.5z"/>
 						</svg> Move Down
@@ -357,22 +351,22 @@
 								<div class="row">
 									<div class="col">{{col.label}}</div>
 									<div class="sect_move">
-										<button ng-disabled="$parent.$index == 0" ng-click="section_mod($parent.$index, $index, 'move-y', -1)" class="btn btn-dark">
+										<button ng-disabled="$parent.$index == 0" ng-click="section_mod('move-y', $parent.$index, $index, -1)" class="btn btn-dark">
 											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
 											  <path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/>
 											</svg>
 										</button>
-										<button ng-disabled="$parent.$index == data.length-1" ng-click="section_mod($parent.$index, $index, 'move-y', 1)" class="btn btn-dark">
+										<button ng-disabled="$parent.$index == data.length-1" ng-click="section_mod('move-y', $parent.$index, $index, 1)" class="btn btn-dark">
 											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down" viewBox="0 0 16 16">
 											  <path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/>
 											</svg>
 										</button>
-										<button ng-disabled="$index==0" ng-click="section_mod($parent.$index, $index, 'move-x', -1)" class="btn btn-dark">
+										<button ng-disabled="$index==0" ng-click="section_mod('move-x', $parent.$index, $index, -1)" class="btn btn-dark">
 											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
 											  <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
 											</svg>
 										</button>
-										<button ng-disabled="$index==row.length-1" ng-click="section_mod($parent.$index, $index, 'move-x', 1)" class="btn btn-dark">
+										<button ng-disabled="$index==row.length-1" ng-click="section_mod('move-x', $parent.$index, $index, 1)" class="btn btn-dark">
 											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
 											  <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
 											</svg>
@@ -404,12 +398,12 @@
 											{{obj.label}}
 										</div>
 										<div>
-											<button ng-disabled="$index==0" class="btn btn-secondary" ng-click="link_mod($parent.$parent.$index, $parent.$index, $index, 'move', -1)">
+											<button ng-disabled="$index==0" class="btn btn-secondary" ng-click="link_mod('move', $parent.$parent.$index, $parent.$index, $index, -1)">
 												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
 												  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 11.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
 												</svg>
 											</button>
-											<button ng-disabled="$index==col.items.length-1" class="btn btn-secondary" ng-click="link_mod($parent.$parent.$index, $parent.$index, $index, 'move', 1)">
+											<button ng-disabled="$index==col.items.length-1" class="btn btn-secondary" ng-click="link_mod('move', $parent.$parent.$index, $parent.$index, $index, 1)">
 												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down" viewBox="0 0 16 16">
 												  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5a.5.5 0 0 0-1 0v5.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V4.5z"/>
 												</svg>
