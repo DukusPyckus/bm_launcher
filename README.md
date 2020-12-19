@@ -8,4 +8,4 @@ A single web-page bookmark utility
   
 # Dependencies
 Bootstrap 4, Angular 1.6.9
--Frameworks are referenced via their provided CDN URLs initially
+  * *Frameworks are referenced and cached via their provided Web-Based CDN URLs initially*
