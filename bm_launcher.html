@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Launcher</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	</head>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script><script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular-sanitize.js"></script>
+	<script>
+		var app = angular.module('bmLauncher', ['ngSanitize']);
+		app.controller('bmLauncher', function($scope) {		
+			$(document).off('click.bs.button.data-api');
+			$(document).on('click.bs.button.data-api', '[data-toggle^=button]', function (e) {
+				var $btn = $(e.target); if (!$btn.hasClass('btn')) $btn = $btn.closest('.btn'); $btn.button('toggle');
+				if (!$(e.target).is('input:radio')) { e.preventDefault(); }
+			});
+			
+			$scope.row_add = function() {
+				$scope.data.push([ { label: 'Section 1', items: [ { label: 'Link 1', path: 'path' } ] } ]);
+				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+			}
+			$scope.row_move = function(dir, i) {
+				var item = $scope.data[i];
+				$scope.data.splice(i, 1);
+				$scope.data.splice(i+dir, 0, item);
+				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+			}
+			
+			$scope.row_mod = function(row, mod, p1) {
+				switch (mod) {
+					case "remove":
+						$scope.data.splice(row, 1);
+					break;
+					case "move":
+						var item = $scope.data[row];
+						$scope.data.splice(row, 1);
+						$scope.data.splice(row + p1, 0, item);
+					break;
+					case "addSection":
+						$scope.data[row].push({ label: p1, items: [ ] });
+					break;
+				}
+				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+			}
+			$scope.section_mod = function(row, section, mod, p1, p2) {
+				switch (mod) {
+					case 'rename':
+						$scope.data[row][section].label = p1;
+					break;
+					case 'addLink':
+						$scope.data[row][section].items.push(obj);
+					break;
+					case 'move-x':
+						var item = $scope.data[row][section];
+						$scope.data[row].splice(section, 1);
+						$scope.data[row].splice(section + p1, 0, item);
+					break;
+					case 'move-y':
+						var item = $scope.data[row][section];
+						$scope.data[row].splice(section, 1);
+						if (section < $scope.data[row + p1].length) {
+							$scope.data[row + p1].splice(section, 0, item);
+						} else {
+							$scope.data[row + p1].push(item);
+						}
+					break;
+					case 'remove':
+						$scope.data[row].splice(section, 1);
+					break;
+				}
+				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+			}
+			$scope.link_mod = function(row, section, link, mod, p1, p2, p3, p4) {
+				switch (mod) {
+					case 'move':
+						var item = $scope.data[row][section].items[link];
+						$scope.data[row][section].items.splice(link, 1);
+						$scope.data[row][section].items.splice(link + p1, 0, item);
+					break;
+					case 'remove':
+						$scope.data[row][section].items.splice(link, 1);
+					break;
+					case 'edit':
+						if (row != p1 || section != p2) {
+							$scope.data[row][section].items.splice(link, 1);
+							$scope.data[p1][p2].items.push({ label: p3, path: p4 });
+						} else {
+							$scope.data[row][section].items[link] = { label: p3, path: p4 };
+						}
+					break;
+				}
+				localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+			}
+			
+			$scope.modal_show = function(opt) {
+				$scope.modal_meta = opt;
+				switch (opt.action) {
+					case 'row_remove':
+						$scope.modal_meta.header = "Please confirm to remove row number: <b><u>" + (opt.row+1) + "</u></b>";
+						$scope.modal_meta.cancel_confirm = true;
+					break;
+					case 'section_add':
+						$scope.modal_meta.form = true; $scope.modal_meta.cancel_confirm = true;
+						$scope.modal_meta.input_1 = "Section Name:"; $scope.modal_meta.input_1_val = "";
+						setTimeout(function (){ $('#input_1').focus(); }, 600);
+					break;
+					case 'section_rename':
+						$scope.modal_meta.form = true; $scope.modal_meta.cancel_confirm = true;
+						$scope.modal_meta.input_1 = "Section Name:"; $scope.modal_meta.input_1_val = $scope.data[opt.row][opt.section].label;
+						setTimeout(function (){ $('#input_1').focus(); }, 600);
+					break;
+					case 'section_remove':
+						$scope.modal_meta.header = "From row " + (opt.row+1) + ", please confirm to remove the section: <b><u>" + $scope.data[opt.row][opt.section].label + "</u></b>";
+						$scope.modal_meta.cancel_confirm = true;
+					break;
+					case 'link_add':
+						$scope.modal_meta.header = "New Link"; $scope.modal_meta.form = true; $scope.modal_meta.link_meta = true; $scope.modal_meta.cancel_confirm = true;
+						$scope.modal_meta.select_row_val = opt.row; $scope.modal_meta.select_section_val = opt.section;
+						$scope.modal_meta.input_1 = "Link Name:"; $scope.modal_meta.input_1_val = ""; $scope.modal_meta.input_2 = "Link Path:"; $scope.modal_meta.input_2_val = "";
+						setTimeout(function (){ $('#input_1').focus(); }, 600);
+					break;
+					case 'link_edit':
+						$scope.modal_meta.header = "Edit Link";
+						$scope.modal_meta.form = true; $scope.modal_meta.link_meta = true; $scope.modal_meta.cancel_confirm = true;
+						$scope.modal_meta.select_row_val = opt.row;
+						$scope.modal_meta.select_section_val = opt.section;
+						$scope.modal_meta.input_1 = "Link Name:"; $scope.modal_meta.input_1_val = $scope.data[opt.row][opt.section].items[opt.link].label;
+						$scope.modal_meta.input_2 = "Link Path:"; $scope.modal_meta.input_2_val = $scope.data[opt.row][opt.section].items[opt.link].path;
+						setTimeout(function (){ $('#input_1').focus(); }, 600);
+					break;
+					case 'link_remove':
+						$scope.modal_meta.header = "From row " + (opt.row+1) + ", section: <b><u>" + $scope.data[opt.row][opt.section].label + "</u></b><br />Please confirm to remove the link: <b><u>" + 
+							$scope.data[opt.row][opt.section].items[opt.link].label + "</u></b><br />Path: <i>" + $scope.data[opt.row][opt.section].items[opt.link].path + "</i>";
+						$scope.modal_meta.cancel_confirm = true;
+					break;
+					case 'local_data':
+						$scope.modal_meta.local_data_interface = true;
+					break;
+					case 'local_data_clear':
+						$scope.modal_meta.header = "Please confirm clearing your local data.";
+						$scope.modal_meta.local_data_interface = false;
+						$scope.modal_meta.cancel_confirm = true;
+					break;
+				}
+			}
+
+			$scope.modal_confirm = function() {
+				switch ($scope.modal_meta.action) {
+					case 'row_remove':
+						$scope.row_mod($scope.modal_meta.row, 'remove');
+					break;
+					case 'section_add':
+						if ($scope.modal_meta.input_1_val.length > 0) {
+							$scope.row_mod($scope.modal_meta.row, 'addSection', $scope.modal_meta.input_1_val);
+						} else { return; }
+					break;
+					case 'section_rename':
+						if ($scope.modal_meta.input_1_val.length > 0) {
+							$scope.section_mod($scope.modal_meta.row, $scope.modal_meta.section, 'rename', $scope.modal_meta.input_1_val);
+						} else { return; }
+					break;
+					case 'section_remove':
+						$scope.section_mod($scope.modal_meta.row, $scope.modal_meta.section, 'remove');
+					break;
+					case 'link_add':
+						if ($scope.modal_meta.input_1_val.length > 0 && $scope.modal_meta.input_2_val.length > 0) {
+							$scope.section_mod($scope.modal_meta.select_row_val, $scope.modal_meta.select_section_val, 'addLink', $scope.modal_meta.input_1_val, $scope.modal_meta.input_2_val);
+						} else { return; }
+					break;					
+					case 'link_edit':
+						if ($scope.modal_meta.input_1_val.length > 0 && $scope.modal_meta.input_2_val.length > 0) {
+							$scope.link_mod($scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link, 'edit',
+								$scope.modal_meta.select_row_val, $scope.modal_meta.select_section_val, $scope.modal_meta.input_1_val, $scope.modal_meta.input_2_val);
+						} else { return; }
+					break;
+					case 'link_remove':
+						$scope.link_mod($scope.modal_meta.row, $scope.modal_meta.section, $scope.modal_meta.link, 'remove');
+					break;
+					case 'local_data_clear':
+						$scope.data_manage('reset_urls');
+					break;
+					default: alert(JSON.stringify($scope.modal_meta, null, 2)); break;
+				}
+				$('#settingsModal').modal('hide');
+			}
+
+			$scope.data_manage = function(type, p1) {
+				switch(type) {
+					case 'download_json':
+						var fileParts = ['Hello World From Javascript'];
+						$('#blobFile').attr('href', window.URL.createObjectURL(new Blob([ JSON.stringify({ urls: $scope.data }) ],{type : 'application/json'}))).attr('download', 'bookmarkLauncher.json');
+						document.getElementById('blobFile').click();
+					break;
+					case 'download_csv':
+						for (var row in $scope.data) {
+							data += '"**Row**","' + row + '"\r\n\r\n';
+							for (var section in $scope.data[row]) {
+								data += '"**Section**","' + $scope.data[row][section].label + '"\r\n';
+								for (var link in $scope.data[row][section].items) {
+									data += '"' + $scope.data[row][section].items[link].label + '","' + $scope.data[row][section].items[link].path + '"\r\n';
+								}
+								data += "\r\n";
+							}
+						}
+						$('#blobFile').attr('href', encodeURI("data:text/csv;charset=utf-8," + data)).attr('download', 'bookmarkLauncher.csv');
+						document.getElementById('blobFile').click();
+					break;
+					case 'import_select':
+						$('#importFile').click();
+					break;
+					case 'import_process_trigger':
+						var reader = new FileReader();
+						reader.onload = function(){
+							try {
+								var data = JSON.parse(reader.result);
+								$scope.data = data.urls;
+								$scope.$apply()
+							} catch {
+								alert("Bad data formatting? Sorry *shrug*");
+							}
+						};
+						reader.readAsText(p1[0]);
+					break;
+					case 'reset_urls':
+						$scope.data = [
+							[
+								{ label: 'Search', items: [
+									{ label: 'Google', path: 'https://www.google.com/' }, { label: 'Bing', path: 'https://www.bing.com/' },
+									{ label: 'DuckDuckGo', path: 'https://duckduckgo.com/' }, { label: 'Ecosia', path: 'https://www.ecosia.org/' }
+								]},
+								{ label: 'Video', items: [
+									{ label: 'YouTube', path: 'https://www.youtube.com/' }, { label: 'Twitch', path: 'https://www.twitch.tv/' }, { label: 'Vimeo', path: 'https://vimeo.com/' }
+								]},
+								{ label: 'TV', items: [
+									{ label: 'Netflix', path: 'https://www.netflix.com/' }, { label: 'Hulu', path: 'https://www.hulu.com/' },
+									{ label: 'YouTube TV', path: 'https://tv.youtube.com/' }, { label: 'Disney Plus', path: 'https://www.disneyplus.com/' }
+								]},
+								{ label: 'Shopping', items: [
+									{ label: 'Amazon', path: 'https://smile.amazon.com/' }, { label: 'eBay', path: 'https://www.ebay.com/' },
+									{ label: 'Best Buy', path: 'https://www.bestbuy.com/' }, { label: 'Overstock', path: 'https://www.overstock.com/' }
+								]}
+							],
+							[
+								{ label: 'Social', items: [
+									{ label: 'Facebook', path: 'https://www.facebook.com/' }, { label: 'Discord', path: 'https://discord.com/' },
+									{ label: 'Instagram', path: 'https://www.instagram.com/' }, { label: 'Twitter', path: 'https://twitter.com/' }
+								]},
+								{ label: 'Photo', items: [
+									{ label: 'Flickr', path: 'https://www.flickr.com/' }, { label: 'Giphy', path: 'https://giphy.com/' }, { label: 'Imgur', path: 'https://imgur.com/' }
+								]},
+								{ label: 'Blog', items: [
+									{ label: 'Reddit', path: 'https://www.reddit.com/' }, { label: 'Pinterest', path: 'https://www.pinterest.com/' },
+									{ label: 'Steemit', path: 'https://steemit.com/' }, { label: 'Tumblr', path: 'https://www.tumblr.com/' }
+								]}
+							],
+							[
+								{ label: 'News', items: [
+									{ label: 'NPR', path: 'https://www.npr.org/' }, { label: 'Google News', path: 'https://news.google.com/' }, { label: 'BBC', path: 'https://www.bbc.com/' },
+									{ label: 'Alt Press', path: 'https://www.altpress.com/' }, { label: 'Reuters', path: 'https://www.reuters.com/' }
+								]},
+								{ label: 'Sports News', items: [
+									{ label: 'ESPN', path: 'https://www.espn.com/' }, { label: 'Sports Illustrated', path: 'https://www.si.com/' },
+									{ label: 'Sports Business Daily', path: 'https://www.sportsbusinessdaily.com/' }, { label: 'Yahoo Sports', path: 'https://sports.yahoo.com/' }
+								]},
+								{ label: 'Sports Leagues', items: [
+									{ label: 'NHL', path: 'https://www.nhl.com/' }, { label: 'NBA', path: 'https://www.nba.com/' }, { label: 'UFC', path: 'https://www.ufc.com/' },
+									{ label: 'MLB', path: 'https://www.mlb.com/' }, { label: 'NFL', path: 'https://www.nfl.com/' }
+								]}
+							]
+						];
+						localStorage.setItem('bmLauncher_data', JSON.stringify($scope.data));
+					break;
+				}
+			}
+			$scope.modal_key = function(keyCode){ if (keyCode == 13) { $scope.modal_confirm(); } }
+			
+			$scope.logic = { inSet: false, import_file: '' };
+			try {
+				$scope.data = JSON.parse(localStorage.getItem('bmLauncher_data'));
+			} catch {
+				localStorage.clear();
+				alert('Data Error - Local Storage Cleared');
+			}
+
+			if (!$scope.data) { $scope.data_manage('reset_urls'); }
+		});
+	</script>
+	
+	<style>
+		.bg-d { background-color:#222; }
+		.btn { line-height: 1; }
+		.modal-dialog .btn { line-height: 2; }
+		.list-group { margin: 5px 10px; }
+		.form-control { padding: .3rem .75rem; }
+			select.form-control { height: auto !important; padding: 0px 15px; }
+		.form-check { margin-top: 1.5rem; margin-bottom: 1rem; padding-left: 0; padding-right: 15px; }
+		.sect_man div { padding: 0px; } .sect_man .btn { margin: .5rem; width: calc(100% - .5rem); }
+		.sect_move button { padding: 0.1rem; }
+		.data_man .btn { font-size: 0.75rem; }
+		.link_man .btn { padding: 0.2rem; }
+	</style>
+  <body class="bg-d">
+    <div class="container" ng-app="bmLauncher" ng-controller="bmLauncher" style="max-width:1440px;">
+		<div ng-hide="true">
+			<a href="" id="blobFile"></a>
+			<input type="file" id="importFile" accept=".json" ng-model="logic.import_file" onchange="angular.element(this).scope().data_manage('import_process_trigger', this.files)"></input>
+		</div>
+		<div ng-hide="logic.inSet;">
+			<div ng-repeat="row in data track by $index" class="row">
+				<div ng-repeat="col in row track by $index" class="col-sm list-group" style="padding:0px;">
+					<span class="list-group-item list-group-item-dark">{{col.label}}</span>
+					<a ng-repeat="obj in col.items track by $index" class="list-group-item text-white bg-dark list-group-item-action" href="{{obj.path ? obj.path : '#'}}">
+						{{obj.label}}
+					</a>
+				</div>
+			</div>
+			<div class="row m-0 nav">
+				<button ng-click="logic.inSet = true;" class="btn btn-info col-1 m-2">Settings</button>
+			</div>
+		</div>
+		<div ng-hide="!logic.inSet">
+			<div class="row text-white"><div class="col">
+				<div class="row">
+					<div class="col-7 row p-2">
+						<button ng-click="logic.inSet = false;" class="btn btn-info col m-1">Leave Settings</button>
+						<button ng-click="modal_show({ action: 'local_data' })" class="btn btn-warning col m-1" data-toggle="modal" data-target="#settingsModal">Manage Local Data</button>
+						<button ng-click="row_add();" class="btn btn-primary col m-1">Add New Row</button>
+					</div>
+				</div>
+				<div ng-repeat="row in data track by $index" class="card text-white bg-dark border-dark mb-3">
+				  <div class="card-header container-fluid"><div class="row">
+					<h4 class="col">Row {{$index + 1}}</h4>
+					<button ng-disabled="$index == 0" class="btn btn-secondary m-1" ng-click="row_mod($index, 'move', -1);">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-square-fill" viewBox="0 0 16 16">
+						  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 11.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
+						</svg> Move Up
+					</button>
+					<button ng-disabled="$index == data.length-1" class="btn btn-secondary m-1" ng-click="row_mod($index, 'move', 1);">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down-square-fill" viewBox="0 0 16 16">
+						  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5a.5.5 0 0 0-1 0v5.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V4.5z"/>
+						</svg> Move Down
+					</button>
+					<button ng-disabled="row.length > 6" class="btn btn-primary m-1" ng-click="modal_show({ action: 'section_add', row: $index })" data-toggle="modal" data-target="#settingsModal">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16">
+						  <path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/><path fill-rule="evenodd" d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+						</svg> Add Section
+					</button>
+					<button class="btn btn-danger m-1" ng-click="modal_show({ action: 'row_remove', row: $index })" data-toggle="modal" data-target="#settingsModal">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+						  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+						</svg> Remove Row
+					</button>
+				  </div></div>
+				  <div class="card-body container-fluid data_man"><div class="row">
+						<div ng-repeat="col in row track by $index" class="card text-white bg-secondary m-1 col " style="padding:0px;">
+							<div class="card-header container-fluid">
+								<div class="row">
+									<div class="col">{{col.label}}</div>
+									<div class="sect_move">
+										<button ng-disabled="$parent.$index == 0" ng-click="section_mod($parent.$index, $index, 'move-y', -1)" class="btn btn-dark">
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
+											  <path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/>
+											</svg>
+										</button>
+										<button ng-disabled="$parent.$index == data.length-1" ng-click="section_mod($parent.$index, $index, 'move-y', 1)" class="btn btn-dark">
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down" viewBox="0 0 16 16">
+											  <path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/>
+											</svg>
+										</button>
+										<button ng-disabled="$index==0" ng-click="section_mod($parent.$index, $index, 'move-x', -1)" class="btn btn-dark">
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+											  <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+											</svg>
+										</button>
+										<button ng-disabled="$index==row.length-1" ng-click="section_mod($parent.$index, $index, 'move-x', 1)" class="btn btn-dark">
+											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
+											  <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+											</svg>
+										</button>
+									</div>
+								</div>
+								<div class="row sect_man">
+									<div class="col"><button class="btn btn-light" ng-click="modal_show({ action: 'section_rename', row: $parent.$index, section: $index })" data-toggle="modal" data-target="#settingsModal">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+											<path fill-rule="evenodd" d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175l-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+										</svg> Rename
+									</button></div>
+									<div class="col"><button class="btn btn-primary" ng-click="modal_show({ action: 'link_add', row: $parent.$index, section: $index })" data-toggle="modal" data-target="#settingsModal">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark-plus" viewBox="0 0 16 16">
+										  <path fill-rule="evenodd" d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/><path fill-rule="evenodd" d="M8 4a.5.5 0 0 1 .5.5V6H10a.5.5 0 0 1 0 1H8.5v1.5a.5.5 0 0 1-1 0V7H6a.5.5 0 0 1 0-1h1.5V4.5A.5.5 0 0 1 8 4z"/>
+										</svg> Add Link
+									</button></div>
+									<div class="col"><button class="btn btn-danger" ng-click="modal_show({ action: 'section_remove', row: $parent.$index, section: $index })" data-toggle="modal" data-target="#settingsModal">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+										  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+										</svg> Remove
+									</button></div>
+								</div>
+							</div>
+							<div class="card-body p-0 link_man">
+								<div ng-repeat="obj in col.items track by $index" class="list-group-item text-white bg-dark list-group-item-action">
+									<div class="row">
+										<div class="col">
+											{{obj.label}}
+										</div>
+										<div>
+											<button ng-disabled="$index==0" class="btn btn-secondary" ng-click="link_mod($parent.$parent.$index, $parent.$index, $index, 'move', -1)">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
+												  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 11.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
+												</svg>
+											</button>
+											<button ng-disabled="$index==col.items.length-1" class="btn btn-secondary" ng-click="link_mod($parent.$parent.$index, $parent.$index, $index, 'move', 1)">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-down" viewBox="0 0 16 16">
+												  <path fill-rule="evenodd" d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5a.5.5 0 0 0-1 0v5.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V4.5z"/>
+												</svg>
+											</button>
+											<button class="btn btn-light" ng-click="modal_show({ action: 'link_edit', row: $parent.$parent.$index, section: $parent.$index, link: $index })" data-toggle="modal" data-target="#settingsModal">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+												  <path fill-rule="evenodd" d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175l-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+												</svg>
+											</button>
+											<button class="btn btn-danger" ng-click="modal_show({ action: 'link_remove', row: $parent.$parent.$index, section: $parent.$index, link: $index })" data-toggle="modal" data-target="#settingsModal">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+												  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+												</svg>
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+				
+				  </div></div>
+				</div>
+			</div></div>
+		</div>
+		
+		<div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="settingsModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered" role="document" style="max-width:1000px;">
+				<div class="modal-content bg-d text-white">
+					<div ng-if="modal_meta.header" class="modal-header">
+						<h4 class="modal-title" id="exampleModalLongTitle" ng-bind-html="modal_meta.header"></h5>
+					</div>
+					<div ng-if="modal_meta.form" class="modal-body" style="border-bottom:1px;">
+						<form>
+							<div ng-if="modal_meta.link_meta" class="row">
+								<div class="form-group col-2">
+									<label for="select_row" class="col-form-label">Row</label>
+									<select id="select_row" type="text" class="form-control" ng-options="data.indexOf(row) as data.indexOf(row)+1 for row in data" ng-model="modal_meta.select_row_val"></select>
+								</div>
+								<div class="form-group col">
+									<label for="select_section" class="col-form-label">Section</label>
+									<select id="select_section" type="text" class="form-control" ng-options="data[modal_meta.select_row_val].indexOf(section) as section.label for section in data[modal_meta.select_row_val]" ng-model="modal_meta.select_section_val"></select>
+								</div>
+							</div>
+							<div ng-if="modal_meta.input_1.length > 0" class="form-group ">
+								<label for="input_1" class="col-form-label">{{modal_meta.input_1}}</label>
+								<input id="input_1" type="text" class="form-control" ng-model="modal_meta.input_1_val" ng-keyup="modal_key($event.keyCode);">
+							</div>
+							<div ng-if="modal_meta.input_2.length > 0" class="form-group">
+								<label for="input_2" class="col-form-label">{{modal_meta.input_2}}</label>
+								<input id="input_2" type="text" class="form-control" ng-model="modal_meta.input_2_val" ng-keyup="modal_key($event.keyCode);">
+							</div>
+						</form>
+					</div>
+					<div ng-if="modal_meta.local_data_interface" class="modal-body storage-gui">
+						<div class="row">
+							<div class="col">
+								<button ng-click="data_manage('download_json')" class="col m-2 btn btn-success">Backup (JSON)</button>
+							</div>
+							<div class="col">
+								<button ng-click="data_manage('import_select')" class="col m-2 btn btn-warning">Import (JSON)</button>
+							</div>
+							<div class="col">
+								<button ng-click="modal_show({ action: 'local_data_clear' })" class="col m-2 btn btn-danger">Clear</button>
+							</div>
+						</div>
+						<div class="row mt-3">
+							<div class="col-4">
+								<button ng-click="data_manage('download_csv')" class="col m-2 btn btn-info">Export (CSV)</button>
+							</div>
+							<div class="col-8">
+								<button class="col m-2 btn btn-secondary" data-dismiss="modal">Close</button>
+							</div>
+						</div>
+					</div>
+					<div ng-if="modal_meta.cancel_confirm" class="modal-footer" style="border-top:0px;">
+						<button type="button" class="col btn btn-secondary" data-dismiss="modal">Cancel</button>
+						<button ng-click="modal_confirm();" type="button" class="col btn btn-primary">Confirm</button>
+					</div>
+				</div>
+			</div>
+		</div>
+    </div>
+	
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  </body>
+</html>
