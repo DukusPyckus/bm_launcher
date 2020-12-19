@@ -2,7 +2,7 @@
 A single web-page bookmark utility
 
 # Suggested Use
-1. Download single-page HTML and store locally
+1. Download the single-page HTML file and store somewhere locally
 2. Install the "New Tab Redirect" [Chrome Extension](https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna)
 3. Reference the local HTML file as your default tab page
   * Make sure to prepend the file path as such in *New Tab Redirect*:
